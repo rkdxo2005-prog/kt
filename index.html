@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>디렉터스 콘티</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="단편영화 「막차」의 감독이 되어 샷 사이즈, 앵글, 180도 법칙, 조명, 편집 리듬을 직접 결정하는 콘티 기반 연출 학습 게임">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Pen+Script&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <button class="brand" id="brand" aria-label="타이틀로">
+      <svg viewBox="0 0 26 22" aria-hidden="true"><path d="M2 9h22v11H2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2 9 1 4l21-3 1 5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 3.4 8.6 8M12 2.6l2.6 4.6M18 1.8l2.6 4.6" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="brand-name">디렉터스 콘티</span>
+      <span class="brand-film">단편 「막차」</span>
+    </button>
+    <nav class="progress" id="progress" aria-label="진행"></nav>
+    <div class="top-actions">
+      <span class="score" id="score" aria-live="polite"></span>
+      <button class="btn small ghost" id="btn-notes">연출 노트</button>
+    </div>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<section class="strip" id="strip" aria-label="찍은 컷" hidden>
+  <div class="wrap">
+    <div class="strip-head"><span class="label">필름 스트립 — 지금까지 찍은 컷</span><span class="label" id="strip-count"></span></div>
+    <div class="strip-list" id="strip-list"></div>
+  </div>
+</section>
+
+<div class="overlay" id="slate" hidden></div>
+
+<div class="drawer" id="notes" hidden>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="notes-title">
+    <div class="drawer-head"><h2 id="notes-title">연출 노트</h2><button class="btn small" data-act="notes-close">닫기 <span class="kbd">Esc</span></button></div>
+    <div id="notes-body"></div>
+  </div>
+</div>
+
+<div class="player" id="player" role="dialog" aria-modal="true" aria-label="애니매틱" hidden></div>
+
+<script src="js/engine.js"></script>
+<script src="js/art.js"></script>
+<script src="js/render.js"></script>
+<script src="js/sets.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
