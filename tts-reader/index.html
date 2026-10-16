@@ -114,7 +114,7 @@ aside.panel { display: grid; gap: 14px; min-width: 0; }
 .voice-row { display: flex; gap: 6px; }
 .voice-row select { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--sheet); font-size: 13px; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
-.check { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; cursor: pointer; }
+.check, .field .check { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; cursor: pointer; }
 .check input { margin: 3px 0 0; width: 17px; height: 17px; accent-color: var(--accent); }
 .check span { font-size: 14px; font-weight: 500; }
 .check small { grid-column: 2; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
@@ -172,12 +172,12 @@ kbd { font-family: var(--font-ui); font-size: 11.5px; border: 1px solid var(--li
   <header class="top">
     <div class="brand">
       <h1>또박또박 낭독기</h1>
-      <p>글을 붙여넣고 재생을 누르세요. 한국어는 한국어 목소리로, 섞여 있는 영어 단어와 문장은 영어 목소리로 자연스럽게 바꿔 가며 읽어 드립니다.</p>
+      <p>글을 붙여넣고 재생을 누르세요. 문장을 끊지 않고 한 호흡으로, 섞여 있는 영어와 약어까지 사람이 읽듯 자연스럽게 읽어 드립니다.</p>
     </div>
     <div class="top-side">
     <button class="save-btn" id="btn-save" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4l-5.7-5.7 1.4-1.4 3.3 3.3zM4 18h16v2H4z"/></svg>HTML 파일 저장</button>
     <div class="legend" aria-label="표시 안내">
-      <span><b class="k-en">apple</b> 영어 목소리</span>
+      <span><b class="k-en">apple</b> 영어</span>
       <span><b class="k-abbr">AI</b> 한국식 약어 (에이아이)</span>
       <span><b class="k-now">지금</b> 읽는 곳</span>
     </div>
@@ -223,9 +223,14 @@ kbd { font-family: var(--font-ui); font-size: 11.5px; border: 1px solid var(--li
 
       <div class="card">
         <h2>읽는 방식</h2>
-        <label class="check"><input type="checkbox" id="o-native"><span>영어는 영어 목소리로</span><small>apple, Practice makes perfect 같은 부분을 원어민 발음으로 읽어요. 끄면 전부 한국어 목소리로 읽습니다.</small></label>
+        <div class="field" role="radiogroup" aria-labelledby="style-lab">
+          <span class="lab" id="style-lab">읽기 스타일</span>
+          <label class="check"><input type="radio" name="style" value="smooth"><span>성우처럼 부드럽게</span><small>문장을 끊지 않고 한 호흡으로 읽어요. 문장 속 짧은 영어 단어는 한국어 목소리가 그대로 이어 읽고, 세 단어 이상 영어 문장만 영어 목소리로 바꿔요.</small></label>
+          <label class="check"><input type="radio" name="style" value="native"><span>영어 단어는 원어민 발음</span><small>apple 같은 영어 단어마다 영어 목소리로 바꿔 읽어요. 발음은 정확하지만 목소리가 바뀌는 곳에서 살짝 끊겨요.</small></label>
+          <label class="check"><input type="radio" name="style" value="learn"><span>영어 학습용</span><small>원어민 발음으로 읽고, 짧은 영어 단어(세 단어 이하)는 한 번 더 천천히 들려줘요.</small></label>
+          <label class="check"><input type="radio" name="style" value="ko"><span>전부 한국어 목소리</span><small>영어도 한국어 목소리 하나로 읽어요.</small></label>
+        </div>
         <label class="check"><input type="checkbox" id="o-abbr"><span>약어는 한국식으로</span><small>AI → 에이아이, GPT-4 → 지피티 포, PDF로 → 피디에프로. NASA처럼 단어로 읽는 약어는 “나사”로 읽어요.</small></label>
-        <label class="check"><input type="checkbox" id="o-learn"><span>학습 모드</span><small>짧은 영어 단어(세 단어 이하)를 한 번 더, 천천히 들려줘요.</small></label>
       </div>
 
       <div class="card">
@@ -303,8 +308,13 @@ const store = {
   set(k, v) { try { localStorage.setItem('ttb:' + k, JSON.stringify(v)); } catch (e) {} },
 };
 
-const DEFAULTS = { rate: 1, enRate: 0.95, pause: 1, pitch: 1, nativeEn: true, abbrKo: true, learn: false, koVoice: '', enVoice: '' };
-const settings = Object.assign({}, DEFAULTS, store.get('settings', {}));
+const DEFAULTS = { rate: 1, enRate: 0.95, pause: 1, pitch: 1, style: 'smooth', abbrKo: true, koVoice: '', enVoice: '' };
+const settings = (() => {
+  const saved = store.get('settings', {}) || {};
+  if (!saved.style) saved.style = saved.learn ? 'learn' : saved.nativeEn === false ? 'ko' : 'smooth';
+  delete saved.learn; delete saved.nativeEn;
+  return Object.assign({}, DEFAULTS, saved);
+})();
 const saveSettings = () => store.set('settings', settings);
 
 const SAMPLE = `오늘은 영어 단어 몇 개를 함께 익혀 볼게요.
@@ -410,21 +420,26 @@ function enSpeak(t) {
 // 영어 덩어리: 글자로 시작, 띄어쓴 영어 단어와 숫자(뒤에 한글이 바로 붙지 않는)까지 이어 붙인다
 const LAT = /[A-Za-z][A-Za-z0-9'’&.\-]*(?:[ ]+(?:[A-Za-z][A-Za-z0-9'’&.\-]*|\d+(?![\d가-힣])))*/g;
 
-function latinSeg(run) {
+function latinSeg(run, sentenceHasKorean) {
   const words = run.split(/[ ]+/);
   const conv = words.map((w) => (/^\d+$/.test(w) ? w : koReadingOf(w)));
   const allKo = conv.every((c) => c !== null);
   if (allKo) return { display: run, speak: conv.join(' '), lang: 'ko', kind: 'abbr' };
-  if (!settings.nativeEn) return { display: run, speak: words.map((w, i) => conv[i] ?? w).join(' '), lang: 'ko', kind: 'en' };
+  const inKo = { display: run, speak: words.map((w, i) => conv[i] ?? w).join(' '), lang: 'ko', kind: 'en' };
+  if (settings.style === 'ko') return inKo;
+  // 부드럽게: 한국어 문장 속 짧은 영어는 목소리를 바꾸지 않고 한 호흡으로 이어 읽는다
+  const wordCount = words.filter((w) => /[A-Za-z]/.test(w)).length;
+  if (settings.style === 'smooth' && sentenceHasKorean && wordCount < 3) return inKo;
   return { display: run, speak: enSpeak(run), lang: 'en', kind: 'en' };
 }
 function segmentSentence(s) {
   const segs = [];
   let last = 0, m;
+  const hasKorean = /[가-힣]/.test(s);
   LAT.lastIndex = 0;
   while ((m = LAT.exec(s))) {
     if (m.index > last) segs.push({ display: s.slice(last, m.index), lang: 'ko', kind: 'ko' });
-    segs.push(latinSeg(m[0]));
+    segs.push(latinSeg(m[0], hasKorean));
     last = m.index + m[0].length;
   }
   if (last < s.length) segs.push({ display: s.slice(last), lang: 'ko', kind: 'ko' });
@@ -461,6 +476,7 @@ function parse(raw) {
 
 /* ---------------- 5. 읽기 대기열 ---------------- */
 const END_GAP = { sent: 320, line: 480, para: 800, last: 0 };
+const END_GAP_SMOOTH = { sent: 230, line: 400, para: 680, last: 0 };
 const hasSound = (t) => /[\p{L}\p{N}]/u.test(t);
 
 function splitLong(t, max = 120) {
@@ -486,11 +502,11 @@ function buildQueue(doc) {
       if (/^\s*,/.test(text) && q.length > start) q[q.length - 1].gap = Math.max(q[q.length - 1].gap, 220);
       text = text.replace(/^[\s,]+/, '').replace(/[\s,]+$/, (m) => (m.includes(',') ? ',' : '')).trim();
       if (hasSound(text)) {
-        for (const chunk of (cur.lang === 'en' ? [text] : splitLong(text))) {
+        for (const chunk of (cur.lang === 'en' ? [text] : splitLong(text, settings.style === 'smooth' ? 200 : 120))) {
           q.push({ sid: sent.id, segIds: cur.segIds.slice(), text: chunk, lang: cur.lang, slow: false, gap: 60 });
         }
         const words = text.split(/\s+/).filter(hasSound).length;
-        if (cur.lang === 'en' && settings.learn && words <= 3) {
+        if (cur.lang === 'en' && settings.style === 'learn' && words <= 3) {
           q[q.length - 1].gap = 380;
           q.push({ sid: sent.id, segIds: cur.segIds.slice(), text, lang: 'en', slow: true, gap: 300 });
         }
@@ -503,7 +519,7 @@ function buildQueue(doc) {
       cur = { lang: seg.lang, text: seg.speak, segIds: [seg.id] };
     }
     flush();
-    if (q.length > start) q[q.length - 1].gap = END_GAP[sent.end];
+    if (q.length > start) q[q.length - 1].gap = (settings.style === 'smooth' ? END_GAP_SMOOTH : END_GAP)[sent.end];
   }
   return q;
 }
@@ -537,7 +553,8 @@ function loadVoices(force) {
   const all = synth.getVoices();
   if (!all.length && force !== true) return;
   const sort = (a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name);
-  voices.ko = all.filter((v) => /^ko/i.test(normLang(v.lang))).sort(sort);
+  voices.ko = all.filter((v) => /^ko/i.test(normLang(v.lang))).sort(sort)
+    .concat(all.filter((v) => !/^ko/i.test(normLang(v.lang)) && /multilingual/i.test(v.name)).sort(sort));
   voices.en = all.filter((v) => /^en/i.test(normLang(v.lang))).sort(sort);
   fillSelect($('#v-ko'), voices.ko, settings.koVoice);
   fillSelect($('#v-en'), voices.en, settings.enVoice);
@@ -545,6 +562,9 @@ function loadVoices(force) {
   if (!voices.ko.length) {
     warn.hidden = false;
     warn.textContent = '이 기기·브라우저에서 한국어 목소리를 찾지 못했어요. 운영체제 설정에서 한국어 음성을 추가하거나 Chrome, Edge, Safari로 열어 보세요.';
+  } else if (!voices.ko.some(isNice)) {
+    warn.hidden = false;
+    warn.textContent = '지금 브라우저의 한국어 목소리는 기계음에 가까워요. 성우처럼 자연스러운 목소리를 무료로 쓰려면 이 페이지를 Microsoft Edge로 여세요(선희·인준·현수 Natural 음성). 아이폰·맥은 설정 › 손쉬운 사용 › 읽기 및 말하기(음성 콘텐츠) › 음성에서 한국어 “유나(향상됨)”를 내려받으면 좋아져요.';
   } else warn.hidden = true;
 }
 const pickVoice = (lang) => {
@@ -557,7 +577,7 @@ const pickVoice = (lang) => {
 const P = { doc: null, queue: [], idx: 0, playing: false, token: 0, timer: 0, watchdog: 0, keepAlive: 0, key: '', segEls: [], sentEls: [] };
 const src = $('#src'), reader = $('#reader');
 
-function optionKey() { return [settings.nativeEn, settings.abbrKo, settings.learn].join(','); }
+function optionKey() { return [settings.style, settings.abbrKo].join(','); }
 function ensureDoc() {
   const key = src.value + '\u0000' + optionKey();
   if (key === P.key) return;
@@ -804,9 +824,20 @@ function bindCheck(id, key) {
     else if (!reader.hidden && P.queue[P.idx] && P.idx > 0) highlight(P.queue[P.idx]);
   });
 }
-bindCheck('#o-native', 'nativeEn');
 bindCheck('#o-abbr', 'abbrKo');
-bindCheck('#o-learn', 'learn');
+document.querySelectorAll('input[name="style"]').forEach((el) => {
+  el.checked = el.value === settings.style;
+  el.addEventListener('change', () => {
+    if (!el.checked) return;
+    settings.style = el.value;
+    saveSettings();
+    const wasPlaying = P.playing;
+    if (wasPlaying) pause();
+    ensureDoc();
+    if (wasPlaying) play();
+    else if (!reader.hidden && P.queue[P.idx] && P.idx > 0) highlight(P.queue[P.idx]);
+  });
+});
 
 $('#v-ko').addEventListener('change', (e) => { settings.koVoice = e.target.value; saveSettings(); });
 $('#v-en').addEventListener('change', (e) => { settings.enVoice = e.target.value; saveSettings(); });
@@ -814,7 +845,7 @@ function trySample(lang) {
   if (!synth) return;
   if (P.playing) pause();
   synth.cancel();
-  const u = new SpeechSynthesisUtterance(lang === 'ko' ? '안녕하세요. 이 목소리로 한국어를 읽어 드릴게요.' : "Hello! I'll read the English words in this voice.");
+  const u = new SpeechSynthesisUtterance(lang === 'ko' ? '안녕하세요. 오늘도 차분하고 또박또박하게 읽어 드릴게요.' : "Hello! I'll read the English words in this voice.");
   const v = pickVoice(lang);
   if (v) { u.voice = v; u.lang = v.lang; } else u.lang = lang === 'ko' ? 'ko-KR' : 'en-US';
   u.rate = settings.rate * (lang === 'en' ? settings.enRate : 1);
